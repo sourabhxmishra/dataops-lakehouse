@@ -1,0 +1,54 @@
+name: ci
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  quality:
+    name: Lint, test & data-quality gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Set up JDK 17 (for Spark)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Lint
+        run: ruff check src tests
+      - name: Unit tests (PySpark transforms + quality)
+        run: pytest -q
+      - name: Data-quality gate (blocks bad data)
+        run: python -m src.quality.gate data/orders.csv
+      - name: Quarantine demo (runtime gate — clean vs quarantined)
+        run: python -m src.quality.demo
+
+  iac:
+    name: Validate IaC (Bicep + Terraform)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Bicep
+        run: |
+          az bicep install
+          for f in infra/main.bicep infra/modules/storage.bicep infra/modules/databricks.bicep; do
+            echo "::group::$f"
+            az bicep build --file "$f"
+            echo "::endgroup::"
+          done
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.9.5'
+      - name: Terraform init & validate
+        working-directory: infra/terraform
+        run: |
+          terraform init -backend=false
+          terraform validate

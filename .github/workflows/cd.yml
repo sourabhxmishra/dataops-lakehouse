@@ -1,0 +1,54 @@
+name: cd
+
+# Manual promotion: dev -> test -> prod, gated by GitHub Environment approvals.
+# Running it for real needs an AZURE_CREDENTIALS secret and RG_DEV / RG_TEST / RG_PROD
+# variables; the test and prod environments require a reviewer to approve first.
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for the promotion run'
+        required: false
+        default: 'manual promotion'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-dev:
+    name: Deploy -> dev
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Deploy Bicep (dev)
+        run: az deployment group create -g ${{ vars.RG_DEV }} -f infra/main.bicep -p env=dev
+
+  deploy-test:
+    name: Deploy -> test
+    needs: deploy-dev
+    runs-on: ubuntu-latest
+    environment: test # requires reviewer approval
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Deploy Bicep (test)
+        run: az deployment group create -g ${{ vars.RG_TEST }} -f infra/main.bicep -p env=test
+
+  deploy-prod:
+    name: Deploy -> prod
+    needs: deploy-test
+    runs-on: ubuntu-latest
+    environment: prod # requires reviewer approval
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Deploy Bicep (prod)
+        run: az deployment group create -g ${{ vars.RG_PROD }} -f infra/main.bicep -p env=prod

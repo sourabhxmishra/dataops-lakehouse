@@ -1,0 +1,11 @@
+order_id,customer_id,order_date,status,quantity,unit_price,amount,currency
+O-1001,C-01,2026-06-01,placed,2,25.00,50.00,USD
+O-1002,C-02,2026-06-01,shipped,1,80.00,80.00,USD
+O-1003,C-03,2026-06-02,delivered,3,15.50,46.50,EUR
+O-1004,C-01,2026-06-02,delivered,5,9.99,49.95,USD
+O-1005,C-04,2026-06-03,cancelled,1,120.00,120.00,GBP
+O-1006,C-05,2026-06-03,placed,4,30.00,120.00,USD
+O-1007,C-02,2026-06-04,returned,2,45.00,90.00,EUR
+O-1008,C-06,2026-06-04,shipped,1,200.00,200.00,USD
+O-1009,C-03,2026-06-05,delivered,6,12.00,72.00,GBP
+O-1010,C-07,2026-06-05,placed,2,60.00,120.00,USD

@@ -9,12 +9,34 @@ still fails because the *data* is wrong.
 """
 from __future__ import annotations
 
+import os
 import sys
 
 from pyspark.sql import SparkSession
 
+from src.quality import slack
 from src.quality.expectations import duplicate_keys, orders_suite, run_suite
 from src.transforms.orders import clean_orders, read_orders_csv
+
+
+def _run_context() -> str:
+    repo = os.environ.get("GITHUB_REPOSITORY", "")
+    run_id = os.environ.get("GITHUB_RUN_ID", "")
+    ref = os.environ.get("GITHUB_REF_NAME", "")
+    server = os.environ.get("GITHUB_SERVER_URL", "https://github.com")
+    return f" <{server}/{repo}/actions/runs/{run_id}|{repo}@{ref}>" if repo and run_id else ""
+
+
+def _notify_slack(path, total, results, dups, violations):
+    if not violations:
+        text = f"✅ *Data-quality gate PASSED* — `{path}` ({total} rows).{_run_context()}"
+    else:
+        failed = [r.name for r in results if not r.passed] + (["order_id_unique"] if dups else [])
+        text = (
+            f"🛑 *Data-quality gate FAILED* — `{path}`: {violations} violation(s) "
+            f"[{', '.join(failed)}].{_run_context()}"
+        )
+    print(f"Slack notification: {'sent' if slack.notify(text) else 'skipped (no SLACK_WEBHOOK_URL)'}")
 
 
 def main(path: str) -> int:
@@ -40,6 +62,7 @@ def main(path: str) -> int:
     print("-" * 54)
 
     violations = sum(r.failed for r in results) + dups
+    _notify_slack(path, total, results, dups, violations)
     spark.stop()
     if violations:
         print(f"GATE FAILED — {violations} violation(s). Broken data blocked from prod.\n")

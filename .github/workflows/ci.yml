@@ -26,6 +26,8 @@ jobs:
       - name: Unit tests (PySpark transforms + quality)
         run: pytest -q
       - name: Data-quality gate (blocks bad data)
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: python -m src.quality.gate data/orders.csv
       - name: Quarantine demo (runtime gate — clean vs quarantined)
         run: python -m src.quality.demo

@@ -168,6 +168,11 @@ The **CI gate** runs the suite and exits non-zero on any violation (that's what 
 clean, quarantined = split(batch, orders_suite())   # clean → gold, bad → quarantine (+ _dq_reasons)
 ```
 
+### 🔔 Slack alerts (optional)
+Set a **`SLACK_WEBHOOK_URL`** repo secret and the gate posts its pass/fail summary — with the
+failing expectations — to Slack on every run. It's a clean no-op until the secret exists (and the
+URL is restricted to `hooks.slack.com` to avoid SSRF), so CI stays green either way.
+
 ---
 
 ## 🧱 Tech stack
@@ -256,4 +261,5 @@ CI/CD *is* the deliverable.
 - [x] CD: dev → test → prod with environment approvals
 - [x] Proof: bad-data PR blocked · clean PR green · quarantine split ✅
 - [x] **data-diff on PRs** — every feed change gets a row-count + distribution diff commented on the PR
-- [ ] **Next** — a Slack summary of the gate results · Great Expectations / Databricks DQX at scale
+- [x] **Slack summary of the gate results** — posts pass/fail (+ failing expectations) to a webhook when `SLACK_WEBHOOK_URL` is set
+- [ ] **Next** — Great Expectations / Databricks DQX at scale on a live medallion

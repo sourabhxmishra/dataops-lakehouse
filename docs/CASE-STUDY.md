@@ -69,10 +69,10 @@ like a failing unit test blocks a merge.
 
 ## 🔭 What I'd add next
 
-A Slack summary of the gate results, and swapping the tiny engine for Great Expectations /
-Databricks DQX on a live medallion. (**Data-diff on PRs is already built** — every feed change gets a
-row-count + distribution diff commented on the PR, flagging brand-new values and null spikes before
-merge.)
+Swapping the tiny engine for Great Expectations / Databricks DQX on a live medallion. (**Data-diff
+on PRs** and a **Slack summary of the gate results** are already built — every feed change gets a
+row-count + distribution diff commented on the PR, and the gate posts its pass/fail summary to Slack
+when a `SLACK_WEBHOOK_URL` secret is set.)
 
 ---
 

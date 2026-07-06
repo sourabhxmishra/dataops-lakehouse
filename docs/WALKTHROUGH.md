@@ -125,6 +125,10 @@ Runtime quality gate — batch of 14 rows
   quarantined -> quarantine  : 4
 ```
 
+A separate **`data-diff.yml`** workflow comments a data-diff on any PR that touches `data/**` —
+row-count, distribution shifts, brand-new values, and null rates — so the *data* impact is visible
+in the PR before merge.
+
 ---
 
 ## Phase 6 · CD — promotion with approvals

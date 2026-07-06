@@ -54,6 +54,7 @@ flowchart LR
 | PR / push | `pytest` — PySpark transforms | block merge |
 | PR / push | **data-quality gate** on the feed | **block merge** |
 | PR / push | Bicep build + Terraform validate | block merge |
+| PR (data change) | **data-diff** comment (rows · distributions · new values · nulls) | informational |
 | Deploy | environment approval (test, prod) | pause for review |
 | Runtime | expectation split | **quarantine** bad rows |
 
@@ -131,6 +132,17 @@ deploy-prod:
   environment: prod        # required reviewer
 ```
 
+### 📊 Data-diff on every data PR
+Any PR that touches the feed gets an auto-comment summarizing the **data** impact — so a reviewer
+catches a suspicious new `status` or a spike in null keys *before* merge. Real comment on
+[PR #1](https://github.com/sourabhxmishra/dataops-lakehouse/pull/1):
+
+> **Rows:** 10 → 14  (**+4**)
+> - **status** — `teleported` **new ⚠️** (0 → 1) · `placed` +2 · `shipped` +1
+> - **currency** — `BTC` **new ⚠️** (0 → 1) · `USD` +3
+> - **Null / empty cells** — `customer_id` 0 → 1
+> - **Σ amount:** 948.45 → 1,023.45
+
 ---
 
 ## 🔎 The gate, in code
@@ -172,18 +184,21 @@ deploy target)
 dataops-lakehouse/
 ├── .github/workflows/
 │   ├── ci.yml                  # PR/push: ruff + pytest + data-quality gate + IaC validate
-│   └── cd.yml                  # manual promotion: dev → test → prod (environment approvals)
+│   ├── cd.yml                  # manual promotion: dev → test → prod (environment approvals)
+│   └── data-diff.yml           # PR: comment a data-diff on feed changes
 ├── src/
 │   ├── transforms/orders.py    # pure, testable PySpark transforms
 │   └── quality/
 │       ├── expectations.py     # tiny GE-style expectation engine (shared by CI + runtime)
 │       ├── quarantine.py       # split a batch → clean vs quarantined (+ reasons)
 │       ├── gate.py             # CI gate — exits non-zero on any violation
-│       └── demo.py             # runtime quarantine demo (clean vs quarantined)
+│       ├── demo.py             # runtime quarantine demo (clean vs quarantined)
+│       └── data_diff.py        # PR data-diff (row-count + distribution shifts)
 ├── tests/                      # pytest — local SparkSession fixture
 │   ├── conftest.py
 │   ├── test_transforms.py
-│   └── test_quality.py
+│   ├── test_quality.py
+│   └── test_data_diff.py
 ├── infra/
 │   ├── main.bicep + modules/   # env-parameterized (dev/test/prod)
 │   └── terraform/              # same infra, Terraform variant
@@ -202,6 +217,7 @@ ruff check src tests
 pytest -q                                  # PySpark unit tests
 python -m src.quality.gate data/orders.csv # the data-quality gate (exit code = pass/fail)
 python -m src.quality.demo                 # runtime quarantine split
+python -m src.quality.data_diff a.csv b.csv # data-diff between two feed versions
 ```
 
 > Requires Python 3.11/3.12 + Java 17 (for Spark). CI runs exactly these steps on every push.
@@ -239,4 +255,5 @@ CI/CD *is* the deliverable.
 - [x] CI: ruff + pytest + data-quality gate + Bicep/Terraform validate
 - [x] CD: dev → test → prod with environment approvals
 - [x] Proof: bad-data PR blocked · clean PR green · quarantine split ✅
-- [ ] **Next** — data-diff on PRs · a Slack summary of the gate results · Great Expectations / Databricks DQX at scale
+- [x] **data-diff on PRs** — every feed change gets a row-count + distribution diff commented on the PR
+- [ ] **Next** — a Slack summary of the gate results · Great Expectations / Databricks DQX at scale

@@ -76,26 +76,60 @@ flowchart LR
 ## ✅ Proof — the gate in action
 
 ### ❌ A PR with broken data is blocked *(the money shot)*
-A pull request adds rows with a bad status, a null customer, and a negative amount. The code is
-fine — but the **data-quality gate fails**, so the PR can't merge.
+[PR #1](https://github.com/sourabhxmishra/dataops-lakehouse/pull/1) adds four rows with a typo'd
+status, a null customer, a negative amount, and an unsupported currency. `ruff` and the PySpark
+tests **pass** — the code is fine — but the **data-quality gate fails**, so the PR can't merge.
 
-![CI red — the data-quality gate blocks a bad-data PR](docs/img/ci-red-gate.png)
+![CI red — lint & tests pass, but the data-quality gate blocks the bad-data PR](docs/img/ci-red-gate.png)
+
+Real gate output from that run:
+
+```text
+  customer_id_not_null       customer_id  FAIL (1)
+  quantity_positive          quantity     FAIL (1)
+  amount_non_negative        amount       FAIL (1)
+  status_in_set              status       FAIL (1)
+  currency_in_set            currency     FAIL (1)
+GATE FAILED — 5 violation(s). Broken data blocked from prod.
+```
 
 ### ✅ Clean data passes every gate
-On `main`, lint + PySpark tests + the data-quality gate + Bicep/Terraform validation are all green.
+On `main`, lint + PySpark tests + the data-quality gate + the quarantine demo + Bicep/Terraform
+validation are all green.
 
-![CI green — all gates pass](docs/img/ci-green.png)
+![CI green — every gate passes on main](docs/img/ci-green.png)
 
 ### 🗃️ Runtime quarantine — bad rows isolated with reasons
-At runtime the batch is split: clean rows go to gold; bad rows go to quarantine tagged with the
-exact expectations they failed.
+At runtime a mixed batch is split: clean rows go to gold; bad rows go to quarantine tagged with the
+exact expectations they failed. Real output from the CI **quarantine demo** step:
 
-![Quarantine split — clean vs quarantined with reasons](docs/img/quarantine.png)
+```text
+Runtime quality gate — batch of 14 rows
+  clean       -> gold        : 10
+  quarantined -> quarantine  : 4
++--------+----------+--------+--------+------+----------------------------------------+
+|order_id|status    |currency|quantity|amount|_dq_reasons                             |
++--------+----------+--------+--------+------+----------------------------------------+
+|O-9001  |teleported|USD     |1       |10.0  |[status_in_set]                         |
+|O-9002  |placed    |USD     |2       |20.0  |[customer_id_not_null]                  |
+|O-9003  |placed    |USD     |-3      |-30.0 |[quantity_positive, amount_non_negative]|
+|O-9004  |shipped   |BTC     |1       |10.0  |[currency_in_set]                       |
++--------+----------+--------+--------+------+----------------------------------------+
+```
 
 ### 🔐 dev → test → prod behind approvals
-`test` and `prod` require a reviewer to approve before a deployment proceeds.
+Promotion is gated by GitHub **environments**: `dev` deploys automatically, while **`test` and
+`prod` require a reviewer to approve** before the deployment proceeds.
 
-![GitHub environments with required approvals](docs/img/environments.png)
+```yaml
+# .github/workflows/cd.yml — each stage runs only after the previous, behind an approval
+deploy-test:
+  needs: deploy-dev
+  environment: test        # required reviewer
+deploy-prod:
+  needs: deploy-test
+  environment: prod        # required reviewer
+```
 
 ---
 

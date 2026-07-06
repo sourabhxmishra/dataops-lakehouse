@@ -117,7 +117,13 @@ non-zero → **red, merge blocked**:
 
 ![CI green — all gates pass](img/ci-green.png)
 
-![Quarantine split](img/quarantine.png)
+Real output from the CI **quarantine demo** step:
+
+```text
+Runtime quality gate — batch of 14 rows
+  clean       -> gold        : 10
+  quarantined -> quarantine  : 4
+```
 
 ---
 
@@ -125,9 +131,8 @@ non-zero → **red, merge blocked**:
 
 `.github/workflows/cd.yml` is a manual (`workflow_dispatch`) promotion: `deploy-dev → deploy-test →
 deploy-prod`. The `test` and `prod` jobs use GitHub **environments** with **required reviewers**, so
-a human approves before each stage.
-
-![dev → test → prod environments with approvals](img/environments.png)
+a human approves before each stage — `dev` deploys automatically, while `test` and `prod` require a
+reviewer to approve first.
 
 > Keeping CD manual (not on every push) keeps the badge green without needing cloud credentials in
 > the repo, while still shipping a faithful, approval-gated promotion.

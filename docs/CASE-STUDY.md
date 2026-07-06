@@ -69,8 +69,10 @@ like a failing unit test blocks a merge.
 
 ## 🔭 What I'd add next
 
-Data-diff on PRs (row-count and distribution deltas), a Slack summary of the gate results, and
-swapping the tiny engine for Great Expectations / Databricks DQX on a live medallion.
+A Slack summary of the gate results, and swapping the tiny engine for Great Expectations /
+Databricks DQX on a live medallion. (**Data-diff on PRs is already built** — every feed change gets a
+row-count + distribution diff commented on the PR, flagging brand-new values and null spikes before
+merge.)
 
 ---
 
